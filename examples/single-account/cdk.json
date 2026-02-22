@@ -1,0 +1,15 @@
+{
+  "app": "node dist/bin/app",
+  "output": "cdk.out",
+  "context": {
+    "stage": "dev",
+    "domainName": "corp.example.com",
+    "domainShortName": "CORP",
+    "notificationEmail": "admin@example.com",
+    "enableQuickSight": "true",
+    "enableMonitoring": "true",
+    "quickSightAdminGroup": "QuickSightAdmins",
+    "quickSightAuthorGroup": "QuickSightAuthors",
+    "quickSightReaderGroup": "QuickSightReaders"
+  }
+}

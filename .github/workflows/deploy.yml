@@ -1,0 +1,156 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: 'Stage to deploy (dev | gamma | prod)'
+        required: true
+        default: dev
+        type: choice
+        options: [dev, gamma, prod]
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  # ── Build & Test ────────────────────────────────────────────────────────────
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+
+  # ── Dev ─────────────────────────────────────────────────────────────────────
+  deploy-dev:
+    name: Deploy → dev
+    needs: test
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.stage == 'dev')
+    runs-on: ubuntu-latest
+    environment: dev
+    permissions:
+      id-token: write   # required for OIDC
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci && npm run build
+
+      # OIDC auth (preferred) — set AWS_USE_OIDC=true in repo/environment settings
+      - name: Configure AWS credentials (OIDC)
+        if: vars.AWS_USE_OIDC == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # IAM key fallback
+      - name: Configure AWS credentials (IAM keys)
+        if: vars.AWS_USE_OIDC != 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: CDK Deploy dev
+        run: |
+          npx cdk deploy --all --require-approval never \
+            --context stage=dev \
+            --context domainName=${{ secrets.DOMAIN_NAME }} \
+            --context domainShortName=${{ secrets.DOMAIN_SHORT_NAME }} \
+            --context notificationEmail=${{ secrets.NOTIFICATION_EMAIL }}
+
+  # ── Gamma (manual approval gate) ────────────────────────────────────────────
+  deploy-gamma:
+    name: Deploy → gamma
+    needs: deploy-dev
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.stage == 'gamma')
+    runs-on: ubuntu-latest
+    environment: gamma          # GitHub environment with required reviewers = approval gate
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci && npm run build
+
+      - name: Configure AWS credentials (OIDC)
+        if: vars.AWS_USE_OIDC == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Configure AWS credentials (IAM keys)
+        if: vars.AWS_USE_OIDC != 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: CDK Deploy gamma
+        run: |
+          npx cdk deploy --all --require-approval never \
+            --context stage=gamma \
+            --context domainName=${{ secrets.DOMAIN_NAME }} \
+            --context domainShortName=${{ secrets.DOMAIN_SHORT_NAME }} \
+            --context notificationEmail=${{ secrets.NOTIFICATION_EMAIL }}
+
+  # ── Prod (manual approval gate) ─────────────────────────────────────────────
+  deploy-prod:
+    name: Deploy → prod
+    needs: deploy-gamma
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.stage == 'prod')
+    runs-on: ubuntu-latest
+    environment: prod           # GitHub environment with required reviewers = approval gate
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci && npm run build
+
+      - name: Configure AWS credentials (OIDC)
+        if: vars.AWS_USE_OIDC == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Configure AWS credentials (IAM keys)
+        if: vars.AWS_USE_OIDC != 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: CDK Deploy prod
+        run: |
+          npx cdk deploy --all --require-approval never \
+            --context stage=prod \
+            --context domainName=${{ secrets.DOMAIN_NAME }} \
+            --context domainShortName=${{ secrets.DOMAIN_SHORT_NAME }} \
+            --context notificationEmail=${{ secrets.NOTIFICATION_EMAIL }}
