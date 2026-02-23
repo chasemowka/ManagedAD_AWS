@@ -1,4 +1,4 @@
-# draupnir-mad-cdk
+# managedAD-aws-cdk
 
 AWS CDK solution for automated deployment of **AWS Managed Microsoft AD** with **Amazon QuickSight Enterprise** integration.
 
