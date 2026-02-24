@@ -10,6 +10,7 @@ import * as path from 'path';
 
 export interface QuickSightSubscriptionStackProps extends StackProps {
   readonly stage: string;
+  readonly projectPrefix: string;
   readonly notificationEmail: string;
 }
 
@@ -17,9 +18,9 @@ export class QuickSightSubscriptionStack extends Stack {
   constructor(scope: Construct, id: string, props: QuickSightSubscriptionStackProps) {
     super(scope, id, props);
 
-    const { stage, notificationEmail } = props;
+    const { stage, projectPrefix, notificationEmail } = props;
 
-    const directoryId = StringParameter.valueForStringParameter(this, `/draupnir/${stage}/directory-id`);
+    const directoryId = StringParameter.valueForStringParameter(this, `/${projectPrefix}/${stage}/directory-id`);
 
     const quickSightLambda = new Function(this, 'QuickSightSubscriptionLambda', {
       runtime: Runtime.NODEJS_18_X,
@@ -94,10 +95,10 @@ export class QuickSightSubscriptionStack extends Stack {
       serviceToken: quickSightProvider.serviceToken,
       properties: {
         AwsAccountId: this.account,
-        AccountName: `draupnir-${this.account}`,
+        AccountName: `${projectPrefix}-${this.account}`,
         Edition: 'ENTERPRISE',
         AuthenticationMethod: 'ACTIVE_DIRECTORY',
-        ActiveDirectoryName: StringParameter.valueForStringParameter(this, `/draupnir/${stage}/directory-id`),
+        ActiveDirectoryName: StringParameter.valueForStringParameter(this, `/${projectPrefix}/${stage}/directory-id`),
         AdminGroup: adminGroup,
         AuthorGroup: authorGroup,
         ReaderGroup: readerGroup,

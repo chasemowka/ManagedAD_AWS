@@ -9,6 +9,7 @@ import { CfnMicrosoftAD } from 'aws-cdk-lib/aws-directoryservice';
 
 export interface ManagedAdStackProps extends StackProps {
   readonly stage: string;
+  readonly projectPrefix: string;
   readonly domainName: string;
   readonly domainShortName: string;
 }
@@ -17,7 +18,7 @@ export class ManagedAdStack extends Stack {
   constructor(scope: Construct, id: string, props: ManagedAdStackProps) {
     super(scope, id, props);
 
-    const { stage, domainName, domainShortName } = props;
+    const { stage, projectPrefix, domainName, domainShortName } = props;
 
     const passwordConfig: SecretStringGenerator = {
       includeSpace: false,
@@ -28,12 +29,12 @@ export class ManagedAdStack extends Stack {
 
     const domainAdminSecret = new Secret(this, 'DomainAdminSecret', {
       description: 'Active Directory Administrator Account',
-      secretName: `/draupnir/${stage}/domain-admin-password`,
+      secretName: `/${projectPrefix}/${stage}/domain-admin-password`,
       generateSecretString: passwordConfig,
     });
 
     new StringParameter(this, 'DomainAdminSecretArnParam', {
-      parameterName: `/draupnir/${stage}/domain-admin-secret-arn`,
+      parameterName: `/${projectPrefix}/${stage}/domain-admin-secret-arn`,
       stringValue: domainAdminSecret.secretArn,
     });
 
@@ -51,19 +52,19 @@ export class ManagedAdStack extends Stack {
     });
 
     new StringParameter(this, 'VpcIdParam', {
-      parameterName: `/draupnir/${stage}/vpc-id`,
+      parameterName: `/${projectPrefix}/${stage}/vpc-id`,
       stringValue: vpc.vpcId,
     });
 
     new StringParameter(this, 'VpcAzsParam', {
-      parameterName: `/draupnir/${stage}/vpc-azs`,
+      parameterName: `/${projectPrefix}/${stage}/vpc-azs`,
       stringValue: Fn.join(',', vpc.availabilityZones),
     });
 
     const subnetIds = vpc.selectSubnets({ subnetType: SubnetType.PUBLIC, onePerAz: true }).subnetIds;
 
     new StringParameter(this, 'SubnetIdsParam', {
-      parameterName: `/draupnir/${stage}/subnet-ids`,
+      parameterName: `/${projectPrefix}/${stage}/subnet-ids`,
       stringValue: Fn.join(',', subnetIds),
     });
 
@@ -79,26 +80,26 @@ export class ManagedAdStack extends Stack {
     });
 
     new StringParameter(this, 'DirectoryIdParam', {
-      parameterName: `/draupnir/${stage}/directory-id`,
+      parameterName: `/${projectPrefix}/${stage}/directory-id`,
       stringValue: managedAd.ref,
     });
 
     new StringParameter(this, 'DnsIpParam', {
-      parameterName: `/draupnir/${stage}/dns-ip`,
+      parameterName: `/${projectPrefix}/${stage}/dns-ip`,
       stringValue: Fn.select(0, managedAd.attrDnsIpAddresses),
     });
 
     new StringParameter(this, 'DnsIpsParam', {
-      parameterName: `/draupnir/${stage}/dns-ips`,
+      parameterName: `/${projectPrefix}/${stage}/dns-ips`,
       stringValue: Fn.join(',', managedAd.attrDnsIpAddresses),
     });
 
     const userPasswordSecret = new Secret(this, 'UserPasswordSecret', {
-      secretName: `/draupnir/${stage}/user-password`,
+      secretName: `/${projectPrefix}/${stage}/user-password`,
     });
 
     new StringParameter(this, 'UserPasswordSecretArnParam', {
-      parameterName: `/draupnir/${stage}/user-password-secret-arn`,
+      parameterName: `/${projectPrefix}/${stage}/user-password-secret-arn`,
       stringValue: userPasswordSecret.secretArn,
     });
   }

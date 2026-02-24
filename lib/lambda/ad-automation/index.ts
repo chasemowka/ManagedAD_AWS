@@ -126,7 +126,7 @@ async function joinDomain(instanceId: string, directoryId: string, domainName: s
   try {
     await ssm.send(new GetDocumentCommand({ Name: docName }));
   } catch {
-    const customDoc = 'DraupnirMAD-JoinDirectoryServiceDomain';
+    const customDoc = `${process.env.PROJECT_PREFIX ?? 'managed-ad'}-JoinDirectoryServiceDomain`;
     try {
       await ssm.send(new GetDocumentCommand({ Name: customDoc }));
     } catch {

@@ -5,6 +5,7 @@ import { ManagedAdStack } from '../../lib/stacks/managed-ad-stack';
 const app = new App();
 const stack = new ManagedAdStack(app, 'TestManagedAd', {
   stage: 'test',
+  projectPrefix: 'managed-ad',
   domainName: 'corp.example.com',
   domainShortName: 'CORP',
   env: { account: '123456789012', region: 'us-east-1' },
@@ -21,13 +22,13 @@ test('creates a VPC', () => {
 
 test('stores directory ID in SSM', () => {
   template.hasResourceProperties('AWS::SSM::Parameter', {
-    Name: '/draupnir/test/directory-id',
+    Name: '/managed-ad/test/directory-id',
   });
 });
 
 test('stores domain admin secret ARN in SSM', () => {
   template.hasResourceProperties('AWS::SSM::Parameter', {
-    Name: '/draupnir/test/domain-admin-secret-arn',
+    Name: '/managed-ad/test/domain-admin-secret-arn',
   });
 });
 
@@ -37,6 +38,6 @@ test('creates domain admin secret in Secrets Manager', () => {
 
 test('stores subnet IDs in SSM', () => {
   template.hasResourceProperties('AWS::SSM::Parameter', {
-    Name: '/draupnir/test/subnet-ids',
+    Name: '/managed-ad/test/subnet-ids',
   });
 });

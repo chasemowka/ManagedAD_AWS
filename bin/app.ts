@@ -28,6 +28,7 @@ const app = new App();
 // ---------------------------------------------------------------------------
 
 const stage = app.node.tryGetContext('stage') ?? 'dev';
+const projectPrefix = app.node.tryGetContext('projectPrefix') ?? 'managed-ad';
 const domainName = app.node.tryGetContext('domainName');
 const domainShortName = app.node.tryGetContext('domainShortName');
 const notificationEmail = app.node.tryGetContext('notificationEmail');
@@ -50,6 +51,7 @@ const env = {
 const managedAdStack = new ManagedAdStack(app, `${stage}-ManagedAd`, {
   env,
   stage,
+  projectPrefix,
   domainName,
   domainShortName,
 });
@@ -57,6 +59,7 @@ const managedAdStack = new ManagedAdStack(app, `${stage}-ManagedAd`, {
 const adAutomationStack = new AdAutomationStack(app, `${stage}-AdAutomation`, {
   env,
   stage,
+  projectPrefix,
   domainName,
   domainShortName,
 });
@@ -66,6 +69,7 @@ if (enableQuickSight) {
   const quickSightStack = new QuickSightSubscriptionStack(app, `${stage}-QuickSight`, {
     env,
     stage,
+    projectPrefix,
     notificationEmail,
   });
   quickSightStack.addDependency(adAutomationStack);
@@ -74,6 +78,7 @@ if (enableQuickSight) {
     const monitoringStack = new MonitoringStack(app, `${stage}-Monitoring`, {
       env,
       stage,
+      projectPrefix,
     });
     monitoringStack.addDependency(quickSightStack);
   }

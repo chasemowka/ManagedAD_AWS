@@ -21,6 +21,7 @@ import * as path from 'path';
 
 export interface AdAutomationStackProps extends StackProps {
   readonly stage: string;
+  readonly projectPrefix: string;
   readonly domainName: string;
   readonly domainShortName: string;
 }
@@ -29,18 +30,18 @@ export class AdAutomationStack extends Stack {
   constructor(scope: Construct, id: string, props: AdAutomationStackProps) {
     super(scope, id, props);
 
-    const { stage, domainName } = props;
+    const { stage, projectPrefix, domainName } = props;
 
-    const directoryId = StringParameter.valueForStringParameter(this, `/draupnir/${stage}/directory-id`);
-    const vpcId = StringParameter.valueForStringParameter(this, `/draupnir/${stage}/vpc-id`);
+    const directoryId = StringParameter.valueForStringParameter(this, `/${projectPrefix}/${stage}/directory-id`);
+    const vpcId = StringParameter.valueForStringParameter(this, `/${projectPrefix}/${stage}/vpc-id`);
     const adminPasswordSecretArn = StringParameter.valueForStringParameter(
       this,
-      `/draupnir/${stage}/domain-admin-secret-arn`,
+      `/${projectPrefix}/${stage}/domain-admin-secret-arn`,
     );
 
     const vpc = Vpc.fromVpcAttributes(this, 'ImportedVpc', {
       vpcId,
-      availabilityZones: StringParameter.valueForStringParameter(this, `/draupnir/${stage}/vpc-azs`).split(','),
+      availabilityZones: StringParameter.valueForStringParameter(this, `/${projectPrefix}/${stage}/vpc-azs`).split(','),
     });
 
     const securityGroup = new SecurityGroup(this, 'EC2SecurityGroup', {
@@ -57,7 +58,7 @@ export class AdAutomationStack extends Stack {
         secretStringTemplate: JSON.stringify({ KeyPairName: `${id}-KeyPair` }),
         generateStringKey: 'PrivateKey',
       },
-      secretName: `/draupnir/${stage}/ec2-keypair`,
+      secretName: `/${projectPrefix}/${stage}/ec2-keypair`,
     });
 
     const ec2Role = new Role(this, 'EC2Role', {
@@ -112,6 +113,7 @@ export class AdAutomationStack extends Stack {
       timeout: Duration.minutes(15),
       memorySize: 1024,
       environment: {
+        PROJECT_PREFIX: projectPrefix,
         DIRECTORY_ID: directoryId,
         ADMIN_SECRET_ARN: adminPasswordSecretArn,
         KEY_PAIR_SECRET_ARN: keyPairSecret.secretArn,
@@ -177,7 +179,7 @@ export class AdAutomationStack extends Stack {
         SecurityGroupId: securityGroup.securityGroupId,
         SubnetId: Fn.select(
           0,
-          Fn.split(',', StringParameter.valueForStringParameter(this, `/draupnir/${stage}/subnet-ids`)),
+          Fn.split(',', StringParameter.valueForStringParameter(this, `/${projectPrefix}/${stage}/subnet-ids`)),
         ),
         InstanceType: 'm5.large',
         KeyPairSecretArn: keyPairSecret.secretArn,

@@ -13,6 +13,8 @@
 export interface EnvironmentConfig {
   /** Deployment stage, e.g. "dev", "staging", "prod" */
   readonly stage: string;
+  /** Prefix used in SSM paths, resource names, and CloudWatch namespaces (default: "managed-ad") */
+  readonly projectPrefix: string;
   /** AD domain FQDN, e.g. "corp.example.com" */
   readonly domainName: string;
   /** AD NetBIOS / short name, e.g. "CORP" */
@@ -41,6 +43,7 @@ export function loadConfig(node: Node): EnvironmentConfig {
 
   return {
     stage: (node.tryGetContext('stage') as string | undefined) ?? 'dev',
+    projectPrefix: (node.tryGetContext('projectPrefix') as string | undefined) ?? 'managed-ad',
     domainName: required('domainName'),
     domainShortName: required('domainShortName'),
     notificationEmail: required('notificationEmail'),

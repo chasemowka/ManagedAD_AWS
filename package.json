@@ -1,5 +1,5 @@
 {
-  "name": "draupnir-mad-cdk",
+  "name": "managed-ad-cdk",
   "version": "1.0.0",
   "description": "AWS CDK solution for automated AWS Managed Microsoft AD with QuickSight Enterprise integration",
   "main": "dist/bin/app.js",

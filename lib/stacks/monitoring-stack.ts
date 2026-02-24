@@ -11,11 +11,15 @@ import { AwsCustomResource, AwsCustomResourcePolicy, PhysicalResourceId } from '
 
 export interface MonitoringStackProps extends StackProps {
   readonly stage: string;
+  readonly projectPrefix: string;
 }
 
 export class MonitoringStack extends Stack {
   constructor(scope: Construct, id: string, props: MonitoringStackProps) {
     super(scope, id, props);
+
+    const { projectPrefix } = props;
+    const metricNamespace = `${projectPrefix}/QuickSight`;
 
     const healthCheckFunction = new Function(this, 'QuickSightHealthCheck', {
       runtime: Runtime.PYTHON_3_12,
@@ -24,12 +28,14 @@ export class MonitoringStack extends Stack {
 import boto3
 import json
 import logging
+import os
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 def handler(event, context):
     account_id = context.invoked_function_arn.split(':')[4]
+    namespace = os.environ['METRIC_NAMESPACE']
     logger.info(f"Starting QuickSight health check for account: {account_id}")
 
     try:
@@ -41,7 +47,7 @@ def handler(event, context):
 
         cloudwatch = boto3.client('cloudwatch')
         cloudwatch.put_metric_data(
-            Namespace='Draupnir/QuickSight',
+            Namespace=namespace,
             MetricData=[{'MetricName': 'SubscriptionHealth', 'Value': health_value, 'Unit': 'Count'}]
         )
         return {'statusCode': 200, 'body': json.dumps(f'QuickSight status: {status}')}
@@ -49,12 +55,15 @@ def handler(event, context):
     except Exception as e:
         logger.error(f"Error: {str(e)}")
         boto3.client('cloudwatch').put_metric_data(
-            Namespace='Draupnir/QuickSight',
+            Namespace=namespace,
             MetricData=[{'MetricName': 'SubscriptionHealth', 'Value': 0, 'Unit': 'Count'}]
         )
         raise e
       `),
       timeout: Duration.seconds(30),
+      environment: {
+        METRIC_NAMESPACE: metricNamespace,
+      },
     });
 
     healthCheckFunction.addToRolePolicy(
@@ -72,7 +81,7 @@ def handler(event, context):
 
     const healthAlarm = new Alarm(this, 'QuickSightHealthAlarm', {
       metric: new Metric({
-        namespace: 'Draupnir/QuickSight',
+        namespace: metricNamespace,
         metricName: 'SubscriptionHealth',
         statistic: 'Average',
       }),

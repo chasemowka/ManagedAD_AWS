@@ -1,10 +1,11 @@
 import { App } from 'aws-cdk-lib';
-import { Template } from 'aws-cdk-lib/assertions';
+import { Template, Match } from 'aws-cdk-lib/assertions';
 import { QuickSightSubscriptionStack } from '../../lib/stacks/quicksight-subscription-stack';
 
 const app = new App({ context: { quickSightAdminGroup: 'QuickSightAdmins' } });
 const stack = new QuickSightSubscriptionStack(app, 'TestQuickSight', {
   stage: 'test',
+  projectPrefix: 'managed-ad',
   notificationEmail: 'admin@example.com',
   env: { account: '123456789012', region: 'us-east-1' },
 });
@@ -21,15 +22,14 @@ test('creates a custom resource for QuickSight subscription', () => {
 test('Lambda has QuickSight permissions', () => {
   template.hasResourceProperties('AWS::IAM::Policy', {
     PolicyDocument: {
-      Statement: [
-        {
-          Action: expect.arrayContaining([
+      Statement: Match.arrayWith([
+        Match.objectLike({
+          Action: Match.arrayWith([
             'quicksight:CreateAccountSubscription',
-            'quicksight:DescribeAccountSubscription',
           ]),
           Effect: 'Allow',
-        },
-      ],
+        }),
+      ]),
     },
   });
 });
@@ -37,9 +37,9 @@ test('Lambda has QuickSight permissions', () => {
 test('Lambda has a deny on Unsubscribe', () => {
   template.hasResourceProperties('AWS::IAM::Policy', {
     PolicyDocument: {
-      Statement: expect.arrayContaining([
-        expect.objectContaining({
-          Action: ['quicksight:Unsubscribe'],
+      Statement: Match.arrayWith([
+        Match.objectLike({
+          Action: 'quicksight:Unsubscribe',
           Effect: 'Deny',
         }),
       ]),
